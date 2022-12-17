@@ -1,8 +1,4 @@
 from requests import get, post
-from cryptocode import decrypt
-from configparser import ConfigParser
-from string import ascii_lowercase
-from random import choice
 from threading import Thread, Lock
 from math import ceil
 
