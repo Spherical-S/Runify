@@ -242,8 +242,8 @@ def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, 
     error_label['text'] = "Processing request, please wait."
     root.update()
     # Authorizing the application to get the access token
-    client_id = "982aa5ce43a04afe8d516ff4398a9fea"
-    secret = "2c965c0800cc4e8891e69319c8cf306e"
+    client_id = "NO"
+    secret = "NO"
     token = get_token(client_id, secret)
     if token == 0:
         return
