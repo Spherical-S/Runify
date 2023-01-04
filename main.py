@@ -4,6 +4,8 @@ from requests import get, post, exceptions
 from base64 import b64encode, decode
 from threading import Thread, Lock
 from math import ceil
+from PIL import Image, ImageTk
+from io import BytesIO
 
 
 # Goes through the auth process to get the access token
@@ -111,11 +113,14 @@ def multi_thread_tracks(i, url, access_token):
                 # In case of a weird bug where an "item" in the playlist is not a song
                 if not isinstance(output['items'][j]['track'], dict):
                     continue
+                if output['items'][j]['is_local']:
+                    continue
                 lock.acquire()
                 track_list[output['items'][j]['track']['id']] = {'Name': output['items'][j]['track']['name'],
-                                                                 'Artist': output['items'][j]['track']['artists'][0]['name']}
+                                                                 'Artist': output['items'][j]['track']['artists'][0]['name'],
+                                                                 'Image': output['items'][j]['track']['album']['images'][2]['url']}
                 lock.release()
-            except Exception:
+            except Exception as e:
                 continue
         # Check if theres more songs in the playlist, if there is, loop again until all songs are accounted for
         if isinstance(output['next'], str):
@@ -224,16 +229,16 @@ def get_song_matches(tempo, dance_val, energy_val, song_data, song_list):
                     match_list['strong'].append(
                         {'id': i, 'Tempo': song_data[i]['Tempo'], 'Danceability': song_data[i]['Danceability'],
                          'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'],
-                         'Artist': song_list[i]['Artist']})
+                         'Artist': song_list[i]['Artist'], 'Image': song_list[i]['Image']})
                 else:
                     match_list['moderate'].append(
                         {'id': i, 'Tempo': song_data[i]['Tempo'], 'Danceability': song_data[i]['Danceability'],
                          'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'],
-                         'Artist': song_list[i]['Artist']})
+                         'Artist': song_list[i]['Artist'], 'Image': song_list[i]['Image']})
             else:
                 match_list['weak'].append(
                     {'id': i, 'Tempo': song_data[i]['Tempo'], 'Danceability': song_data[i]['Danceability'],
-                     'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'], 'Artist': song_list[i]['Artist']})
+                     'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'], 'Artist': song_list[i]['Artist'], 'Image': song_list[i]['Image']})
     return match_list
 
 
@@ -242,8 +247,8 @@ def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, 
     error_label['text'] = "Processing request, please wait."
     root.update()
     # Authorizing the application to get the access token
-    client_id = "NO"
-    secret = "NO"
+    client_id = "No"
+    secret = "No"
     token = get_token(client_id, secret)
     if token == 0:
         return
@@ -271,9 +276,19 @@ def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, 
 
     # Find songs that match the users preference
     matches = get_song_matches(cadence, dance, energy, metrics, tracks)
-    print(matches)
 
     return matches
+
+
+def back():
+    pass
+
+
+def photo_imagify(url):
+    img_data = get(url).content
+    img_open = Image.open(BytesIO(img_data))
+    img = ImageTk.PhotoImage(img_open)
+    return img
 
 
 # Checks the validity of the link given
@@ -299,6 +314,7 @@ def check_link(link):
 def verify():
     # Check if the url is valid
     link = url_entry.get()
+    link = "https://open.spotify.com/user/m8gm7ymt4s5rt9p5j98xroe4k?si=ce923453f68b40df"
     link_check = check_link(link)
     if not link_check[0]:
         error_label["text"] = link_check[1]
@@ -349,7 +365,86 @@ def verify():
     energy_up = str(int(energy_up) / 10)
     dance_low = str(int(dance_low) / 10)
     dance_up = str(int(dance_up) / 10)
-    submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, link)
+    matches = submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, link)
+    display_matches(matches)
+
+
+def display_matches(matches):
+    # Destroying all elements to make room to display the matches
+    main_frame.destroy()
+    matches_frame = Frame(root, width=850, height=500, bg=spotify_black)
+    matches_frame.pack()
+
+    # Creating the needed sections of the screen
+    title_frame = Frame(matches_frame, width=835, height=125, bg=spotify_black)
+    scroll_frame = Frame(matches_frame, width=15, height=500, bg=spotify_black)
+    display_canvas = Canvas(matches_frame, width=835, height=375, bg=spotify_black, highlightthickness=0)
+    title_frame.grid_propagate(False)
+    scroll_frame.grid_propagate(False)
+    title_frame.grid(row=0, column=0)
+    scroll_frame.grid(row=0, rowspan=2, column=1)
+
+    # Creating title frame elements
+    title_frame.back_image = PhotoImage(file="back.png")
+    back_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=back)
+    matches_label = Label(title_frame, text="Matches", font=("Calibri", 25), fg=spotify_white, bg=spotify_black)
+    var = StringVar(title_frame)
+    options = ["Strong", "Medium", "Weak"]
+    var.set(options[0])
+    strength_select = OptionMenu(title_frame, var, *options, command=lambda m=matches: change_strength(m))
+    strength_select.config(bg=spotify_green, fg=spotify_black, font=("Calibri", 12, "bold"), highlightthickness=0, width=6)
+    back_button.place(x=10, y=10)
+    matches_label.place(x=340, y=40)
+    strength_select.place(x=727, y=45)
+
+    # Making the scroll bar functional so that it scrolls the display frame
+    scroll = Scrollbar(scroll_frame, orient=VERTICAL, command=display_canvas.yview)
+    display_canvas.configure(yscrollcommand=scroll.set)
+    display_frame = Frame(display_canvas, bg=spotify_black)
+    scroll.grid(row=0, column=0, sticky='ns')
+    display_canvas.grid(row=1, column=0)
+    display_canvas.create_window((0, 0), window=display_frame, anchor='n')
+    display_canvas.bind('<Configure>', lambda e: display_canvas.configure(scrollregion=display_canvas.bbox('all')))
+
+    # Adding the songs to the display frame
+    song_name_frame = Frame(display_frame, bg=spotify_black, width=167)
+    song_artist_frame = Frame(display_frame, bg=spotify_black, width=167)
+    song_tempo_frame = Frame(display_frame, bg=spotify_black, width=167)
+    song_dance_frame = Frame(display_frame, bg=spotify_black, width=167)
+    song_energy_frame = Frame(display_frame, bg=spotify_black, width=167)
+    song_name_frame.grid(row=0, column=0)
+    song_artist_frame.grid(row=0, column=1)
+    song_tempo_frame.grid(row=0, column=2)
+    song_dance_frame.grid(row=0, column=3)
+    song_energy_frame.grid(row=0, column=4)
+    names = "Name\n====================\n"
+    artists = "Artist\n====================\n"
+    tempos = "Tempo\n=====\n"
+    dances = "Dance Value\n===========\n"
+    energys = "Energy Value\n===========\n"
+    for i in matches['strong']:
+        if len(i['Name']) > 20:
+            i['Name'] = i['Name'][0:20]
+        if len(i['Artist']) > 20:
+            i['Artist'] = i['Artist'][0:20]
+        tempo = ceil(i['Tempo'])
+        dance = ceil(i['Danceability']*10)
+        energy = ceil(i['Energy']*10)
+        names = names + i['Name'] + "\n"
+        artists = artists + i['Artist'] + "\n"
+        tempos = tempos + str(tempo) + "\n"
+        dances = dances + str(dance) + "\n"
+        energys = energys + str(energy) + "\n"
+    Label(song_name_frame, text=names, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
+    Label(song_artist_frame, text=artists, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
+    Label(song_tempo_frame, text=tempos, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
+    Label(song_dance_frame, text=dances, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
+    Label(song_energy_frame, text=energys, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
+    print(matches)
+
+
+def change_strength(matches):
+    pass
 
 
 # initialize global variables
@@ -367,16 +462,18 @@ root.geometry("850x500")
 root.title("Runify")
 icon = PhotoImage(file="icon.ico")
 root.iconphoto(True, icon)
-root.config(background=spotify_black)
+root.config(background="red")
 root.resizable(False, False)
 
 # Initializing the sections of the main page
-top_frame = Frame(root, width=850, height=166, bg=spotify_black)
-mid_frame = Frame(root, width=850, height=166, bg=spotify_black)
-bottom_frame = Frame(root, width=850, height=168, bg=spotify_black)
+main_frame = Frame(root, width=850, height=500, bg=spotify_black)
+top_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
+mid_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
+bottom_frame = Frame(main_frame, width=850, height=168, bg=spotify_black)
 top_frame.grid_propagate(False)
 mid_frame.grid_propagate(False)
 bottom_frame.grid_propagate(False)
+main_frame.pack()
 top_frame.grid(row=0, column=0)
 mid_frame.grid(row=1, column=0)
 bottom_frame.grid(row=2, column=0)
