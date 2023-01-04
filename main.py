@@ -376,13 +376,11 @@ def display_matches(matches):
     matches_frame.pack()
 
     # Creating the needed sections of the screen
-    title_frame = Frame(matches_frame, width=835, height=125, bg=spotify_black)
-    scroll_frame = Frame(matches_frame, width=15, height=500, bg=spotify_black)
-    display_canvas = Canvas(matches_frame, width=835, height=375, bg=spotify_black, highlightthickness=0)
+    title_frame = Frame(matches_frame, width=850, height=125, bg=spotify_black)
+    display_frame = Frame(matches_frame, width=850, height=375, bg=spotify_black, highlightthickness=0)
     title_frame.grid_propagate(False)
-    scroll_frame.grid_propagate(False)
     title_frame.grid(row=0, column=0)
-    scroll_frame.grid(row=0, rowspan=2, column=1)
+    display_frame.grid(row=1, column=0)
 
     # Creating title frame elements
     title_frame.back_image = PhotoImage(file="back.png")
@@ -398,49 +396,59 @@ def display_matches(matches):
     strength_select.place(x=727, y=45)
 
     # Making the scroll bar functional so that it scrolls the display frame
-    scroll = Scrollbar(scroll_frame, orient=VERTICAL, command=display_canvas.yview)
+    display_canvas = Canvas(display_frame, height=375, width=835, bg="blue", highlightthickness=0)
+    display_canvas.grid(row=0, column=0)
+    scroll = Scrollbar(display_frame, orient=VERTICAL, command=display_canvas.yview)
+    scroll.grid(row=0, column=1, sticky='ns')
     display_canvas.configure(yscrollcommand=scroll.set)
-    display_frame = Frame(display_canvas, bg=spotify_black)
-    scroll.grid(row=0, column=0, sticky='ns')
-    display_canvas.grid(row=1, column=0)
-    display_canvas.create_window((0, 0), window=display_frame, anchor='n')
     display_canvas.bind('<Configure>', lambda e: display_canvas.configure(scrollregion=display_canvas.bbox('all')))
+    canvas_frame = Frame(display_canvas, bg="blue")
+    display_canvas.create_window((0, 0), window=canvas_frame, anchor='n')
 
     # Adding the songs to the display frame
-    song_name_frame = Frame(display_frame, bg=spotify_black, width=167)
-    song_artist_frame = Frame(display_frame, bg=spotify_black, width=167)
-    song_tempo_frame = Frame(display_frame, bg=spotify_black, width=167)
-    song_dance_frame = Frame(display_frame, bg=spotify_black, width=167)
-    song_energy_frame = Frame(display_frame, bg=spotify_black, width=167)
-    song_name_frame.grid(row=0, column=0)
-    song_artist_frame.grid(row=0, column=1)
-    song_tempo_frame.grid(row=0, column=2)
-    song_dance_frame.grid(row=0, column=3)
-    song_energy_frame.grid(row=0, column=4)
-    names = "Name\n====================\n"
-    artists = "Artist\n====================\n"
-    tempos = "Tempo\n=====\n"
-    dances = "Dance Value\n===========\n"
-    energys = "Energy Value\n===========\n"
+    height = len(matches['strong']) * 71
+    song_frame = Frame(canvas_frame, bg=spotify_black, width=301, height=height)
+    song_tempo_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
+    song_dance_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
+    song_energy_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
+    song_frame.grid(row=0, column=0,)
+    song_tempo_frame.grid(row=0, column=1)
+    song_dance_frame.grid(row=0, column=2)
+    song_energy_frame.grid(row=0, column=3)
+    song_frame.pack_propagate(False)
+    song_tempo_frame.pack_propagate(False)
+    song_dance_frame.pack_propagate(False)
+    song_energy_frame.pack_propagate(False)
+    song_sub_title = Label(song_frame, text="Song", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    tempo_sub_title = Label(song_tempo_frame, text="Tempo", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    dance_sub_title = Label(song_dance_frame, text="Dance Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    energy_sub_title = Label(song_energy_frame, text="Energy Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    song_sub_title.pack(anchor=W, padx=10)
+    tempo_sub_title.pack()
+    dance_sub_title.pack()
+    energy_sub_title.pack()
+    root.images = []
+    for i in matches['strong']:
+        root.images.append(photo_imagify(i['Image']))
+    count = 0
     for i in matches['strong']:
         if len(i['Name']) > 20:
             i['Name'] = i['Name'][0:20]
         if len(i['Artist']) > 20:
             i['Artist'] = i['Artist'][0:20]
-        tempo = ceil(i['Tempo'])
-        dance = ceil(i['Danceability']*10)
-        energy = ceil(i['Energy']*10)
-        names = names + i['Name'] + "\n"
-        artists = artists + i['Artist'] + "\n"
-        tempos = tempos + str(tempo) + "\n"
-        dances = dances + str(dance) + "\n"
-        energys = energys + str(energy) + "\n"
-    Label(song_name_frame, text=names, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
-    Label(song_artist_frame, text=artists, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
-    Label(song_tempo_frame, text=tempos, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
-    Label(song_dance_frame, text=dances, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
-    Label(song_energy_frame, text=energys, font=("Calibri", 15), fg=spotify_white, bg=spotify_black).grid(row=0, column=0, padx=7)
-    print(matches)
+        tempo = str(ceil(i['Tempo']))
+        dance = str(ceil(i['Danceability']*10))
+        energy = str(ceil(i['Energy']*10))
+        song_label = Label(song_frame, image=root.images[count], text=f" {i['Name']}\n {i['Artist']}",
+                           bg=spotify_black, fg=spotify_white, font=('Calibri', 15), compound=LEFT, anchor='w')
+        song_tempo_label = Label(song_tempo_frame, text=tempo, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_dance_label = Label(song_dance_frame, text=dance, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_energy_label = Label(song_energy_frame, text=energy, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_label.pack(anchor=W, padx=10)
+        song_tempo_label.pack(pady=20)
+        song_dance_label.pack(pady=20)
+        song_energy_label.pack(pady=20)
+        count += 1
 
 
 def change_strength(matches):
