@@ -253,8 +253,8 @@ def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, 
     match_elements[1]['text'] = "Processing request, please wait."
     root.update()
     # Authorizing the application to get the access token
-    client_id = "No"
-    secret = "No"
+    client_id = "no"
+    secret = "no"
     token = get_token(client_id, secret)
     if token == 0:
         return
@@ -420,8 +420,8 @@ def display_matches():
     var.set(options[0])
     strength_select = OptionMenu(title_frame, var, *options, command=change_strength)
     strength_select.config(bg=spotify_green, fg=spotify_black, font=("Calibri", 12, "bold"), highlightthickness=0, width=6)
-    title_frame.back_image = PhotoImage(file="prev.png")
-    title_frame.next_image = PhotoImage(file="next.png")
+    title_frame.back_image = PhotoImage(file="assets\\prev.png")
+    title_frame.next_image = PhotoImage(file="assets\\next.png")
     back_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=initialize)
     prev_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=prev_page)
     next_button = Button(title_frame, cursor="hand2", image=title_frame.next_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=next_page)
@@ -786,7 +786,7 @@ def initialize():
 
     # Elements in the bottom frame
     error_label = Label(bottom_frame, text="", font=("Calibri", 18), fg="red", bg=spotify_black)
-    root.submit_image = PhotoImage(file="submit.png")
+    root.submit_image = PhotoImage(file="assets\\submit.png")
     submit_button = Button(bottom_frame, cursor="hand2", image=root.submit_image, borderwidth=0, bg=spotify_black,
                            activebackground=spotify_black, command=verify)
     error_label.pack(pady=20)
@@ -821,7 +821,7 @@ spotify_green = "#73D565"
 root = Tk()
 root.geometry("850x500")
 root.title("Runify")
-icon = PhotoImage(file="icon.ico")
+icon = PhotoImage(file="assets\\icon.ico")
 root.iconphoto(True, icon)
 root.config(background="red")
 root.resizable(False, False)
