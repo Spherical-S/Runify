@@ -6,8 +6,9 @@ V1.0.0
 
 Rather than trying to find a playlist that has a good tempo AND songs they actually like, using Runify, runners can find songs that are already in their playlists that would be good to run to.
 
-Runners can specify a range for the tempo so that they can time their steps to the beat in order to keep a steady cadence
-Runners can specify how "danceable" and "energetic" the songs should be
+Runners can specify a range for the tempo so that they can time their steps to the beat in order to keep a steady cadence.
+Runners can also specify how "danceable" and "energetic" the songs should be and get a list of songs that have the tempo specified
+and songs that match the danceablity and energy levels specified.
 
 # Bugs
 
