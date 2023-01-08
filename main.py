@@ -10,6 +10,7 @@ from io import BytesIO
 
 # Goes through the auth process to get the access token
 def get_token(c_id, c_secret):
+    global match_elements
     # create the needed headers and body to get the token
     auth_token = c_id + ":" + c_secret
     headers = {
@@ -28,10 +29,10 @@ def get_token(c_id, c_secret):
             access_token = r.json()['access_token']
             return access_token
         else: # Quit the app if there are any errors
-            error_label['text'] = "Authentication error: Contact developer for help!"
+            match_elements[1]['text'] = "Authentication error: Contact developer for help!"
             return 0
     except Exception:
-        error_label['text'] = "Authentication error: Contact developer for help!"
+        match_elements[1]['text'] = "Authentication error: Contact developer for help!"
         return 0
 
 
@@ -53,6 +54,7 @@ def id_from_link(link):
 
 
 def get_playlists(profile, access_token):
+    global match_elements
     playlist_data = {} # Json variable that will hold the needed data to return
     # Set headers and make the request to the API to get all playlists of a user
     headers = {
@@ -63,15 +65,15 @@ def get_playlists(profile, access_token):
     output = r.json()
 
     if r.status_code == 404:  # If theres an error, quit
-        error_label['text'] = "Invalid URL: Spotify profile not found"
+        match_elements[1]['text'] = "Invalid URL: Spotify profile not found"
         return 0
 
     if r.status_code != 200: # If theres an error, quit
-        error_label['text'] = "Error getting spotify playlists, check profile URL and try again later!"
+        match_elements[1]['text'] = "Error getting spotify playlists, check profile URL and try again later!"
         return 0
 
     if len(output['items']) == 0: # Checks if the user even has playlists
-        error_label['text'] = "Profile doesnt have any playlists to analyze!"
+        match_elements[1]['text'] = "Profile doesnt have any playlists to analyze!"
         return 0
 
     for i in range(len(output['items'])): # Loops through all playlists and gathers needed info
@@ -85,6 +87,7 @@ def get_playlists(profile, access_token):
 def multi_thread_tracks(i, url, access_token):
     global track_list
     global threads
+    global match_elements
     # Loop in case the playlist is greater than 100 songs, it will loop infinitely until
     # all songs in the playlist are accounted for since each request can only give up to 100 songs
     while True:
@@ -96,11 +99,11 @@ def multi_thread_tracks(i, url, access_token):
         r = get(url, headers=headers)
         # Make sure that the request was OK
         if r.status_code != 200:
-            error_label['text'] = "Rate limited! Trying again in 30 seconds, do not close the app!"
+            match_elements[1]['text'] = "Rate limited! Trying again in 30 seconds, do not close the app!"
             sleep(30)
             r = get(url, headers=headers)
             if r.status_code != 200:
-                error_label['text'] = "Bad request, try again later!"
+                match_elements[1]['text'] = "Bad request, try again later!"
                 for j in range(len(threads)):
                     if j != i:
                         threads[j].raise_exception()
@@ -149,6 +152,7 @@ def find_tracks(playlist_data, access_token):
 
 
 def multi_thread_metrics(i, songs_list, access_token, final_batch, remainder):
+    global match_elements
     global song_metrics
     # Set how many songs will be in the batch, default 100, but if its the last batch its the remainder
     if final_batch:
@@ -174,11 +178,11 @@ def multi_thread_metrics(i, songs_list, access_token, final_batch, remainder):
     r = get(url, headers=headers)
     # Make sure that the request was OK
     if r.status_code != 200:
-        error_label['text'] = "Rate limited! Trying again in 30 seconds, do not close the app!"
+        match_elements[1]['text'] = "Rate limited! Trying again in 30 seconds, do not close the app!"
         sleep(30)
         r = get(url, headers=headers)
         if r.status_code != 200:
-            error_label['text'] = "Bad request, try again later!"
+            match_elements[1]['text'] = "Bad request, try again later!"
             for j in range(len(threads)):
                 if j != i:
                     threads[j].raise_exception()
@@ -238,13 +242,15 @@ def get_song_matches(tempo, dance_val, energy_val, song_data, song_list):
             else:
                 match_list['weak'].append(
                     {'id': i, 'Tempo': song_data[i]['Tempo'], 'Danceability': song_data[i]['Danceability'],
-                     'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'], 'Artist': song_list[i]['Artist'], 'Image': song_list[i]['Image']})
+                     'Energy': song_data[i]['Energy'], 'Name': song_list[i]['Name'], 'Artist': song_list[i]['Artist'],
+                     'Image': song_list[i]['Image']})
     return match_list
 
 
 # Submits the users information and finds matches
 def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, profile_link):
-    error_label['text'] = "Processing request, please wait."
+    global match_elements
+    match_elements[1]['text'] = "Processing request, please wait."
     root.update()
     # Authorizing the application to get the access token
     client_id = "No"
@@ -280,10 +286,6 @@ def submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, 
     return matches
 
 
-def back():
-    pass
-
-
 def photo_imagify(url):
     img_data = get(url).content
     img_open = Image.open(BytesIO(img_data))
@@ -312,68 +314,98 @@ def check_link(link):
 
 # Verifies if all inputs are valid
 def verify():
+    global matches
+    global match_elements
     # Check if the url is valid
-    link = url_entry.get()
+    link = match_elements[2].get()
     link = "https://open.spotify.com/user/m8gm7ymt4s5rt9p5j98xroe4k?si=ce923453f68b40df"
     link_check = check_link(link)
     if not link_check[0]:
-        error_label["text"] = link_check[1]
+        match_elements[1]["text"] = link_check[1]
         return
     # Check if cadence inputs are valid
-    cadence_low = tempo_min.get()
-    cadence_up = tempo_max.get()
+    cadence_low = match_elements[3].get()
+    cadence_up = match_elements[4].get()
     cadence_range = [cadence_low, cadence_up]
     for i in range(2):
         if not cadence_range[i].isnumeric():
-            error_label["text"] = "Make sure cadence range values are numbers between 120 and 220"
+            match_elements[1]["text"] = "Make sure cadence range values are numbers between 120 and 220"
             return
         if int(cadence_range[i]) > 220 or int(cadence_range[i]) < 120:
-            error_label["text"] = "Make sure cadence range values are numbers between 120 and 220"
+            match_elements[1]["text"] = "Make sure cadence range values are numbers between 120 and 220"
             return
     if int(cadence_low) > int(cadence_up):
-        error_label["text"] = "Make sure cadence min value is less than cadence max value"
+        match_elements[1]["text"] = "Make sure cadence min value is less than cadence max value"
         return
     # Check if dance inputs are valid
-    dance_low = dance_min.get()
-    dance_up = dance_max.get()
+    dance_low = match_elements[5].get()
+    dance_up = match_elements[6].get()
     dance_val_range = [dance_low, dance_up]
     for i in range(2):
         if not dance_val_range[i].isnumeric():
-            error_label["text"] = "Make sure dance range values are numbers between 0 and 10"
+            match_elements[1]["text"] = "Make sure dance range values are numbers between 0 and 10"
             return
         if int(dance_val_range[i]) > 10 or int(dance_val_range[i]) < 0:
-            error_label["text"] = "Make sure dance range values are numbers between 0 and 10"
+            match_elements[1]["text"] = "Make sure dance range values are numbers between 0 and 10"
             return
     if int(dance_low) > int(dance_up):
-        error_label["text"] = "Make sure dance min value is less than dance max value"
+        match_elements[1]["text"] = "Make sure dance min value is less than dance max value"
         return
     # Check if energy inputs are valid
-    energy_low = energy_min.get()
-    energy_up = energy_max.get()
+    energy_low = match_elements[7].get()
+    energy_up = match_elements[8].get()
     energy_val_range = [energy_low, energy_up]
     for i in range(2):
         if not energy_val_range[i].isnumeric():
-            error_label["text"] = "Make sure energy range values are numbers between 0 and 10"
+            match_elements[1]["text"] = "Make sure energy range values are numbers between 0 and 10"
             return
         if int(energy_val_range[i]) > 10 or int(energy_val_range[i]) < 0:
-            error_label["text"] = "Make sure energy range values are numbers between 0 and 10"
+            match_elements[1]["text"] = "Make sure energy range values are numbers between 0 and 10"
             return
     if int(energy_low) > int(energy_up):
-        error_label["text"] = "Make sure energy min value is less than energy max value"
+        match_elements[1]["text"] = "Make sure energy min value is less than energy max value"
         return
     energy_low = str(int(energy_low)/10)
     energy_up = str(int(energy_up) / 10)
     dance_low = str(int(dance_low) / 10)
     dance_up = str(int(dance_up) / 10)
     matches = submit(energy_low, energy_up, dance_low, dance_up, cadence_low, cadence_up, link)
-    display_matches(matches)
+    display_matches()
 
 
-def display_matches(matches):
+def display_matches():
+    global pages
+    global matches
+    global current_page
+    global match_elements
+    # Preparing all the images needed for all pages
+    for i in range(len(matches['strong'])):
+        match_elements[1]['text'] = f"Gathering strong matches ({i}/{len(matches['strong'])})"
+        root.update()
+        matches['strong'][i]['Image'] = photo_imagify(matches['strong'][i]['Image'])
+    for i in range(len(matches['moderate'])):
+        match_elements[1]['text'] = f"Gathering medium matches ({i}/{len(matches['moderate'])})"
+        root.update()
+        matches['moderate'][i]['Image'] = photo_imagify(matches['moderate'][i]['Image'])
+    for i in range(len(matches['weak'])):
+        match_elements[1]['text'] = f"Gathering weak matches ({i}/{len(matches['weak'])})"
+        root.update()
+        matches['weak'][i]['Image'] = photo_imagify(matches['weak'][i]['Image'])
+
+    # Find the amount of songs for each page and the number of total pages
+    pages = {}
+    num_pages = ceil(len(matches['strong']) / 100)
+    for i in range(num_pages):
+        if i+1 == num_pages:
+            pages[i] = [i*100, len(matches['strong'])-1]
+        else:
+            pages[i] = [i*100, ((i+1)*100)-1]
+
     # Destroying all elements to make room to display the matches
-    main_frame.destroy()
+    match_elements[0].destroy()
     matches_frame = Frame(root, width=850, height=500, bg=spotify_black)
     matches_frame.pack()
+    match_elements.clear()
 
     # Creating the needed sections of the screen
     title_frame = Frame(matches_frame, width=850, height=125, bg=spotify_black)
@@ -383,35 +415,42 @@ def display_matches(matches):
     display_frame.grid(row=1, column=0)
 
     # Creating title frame elements
-    title_frame.back_image = PhotoImage(file="back.png")
-    back_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=back)
-    matches_label = Label(title_frame, text="Matches", font=("Calibri", 25), fg=spotify_white, bg=spotify_black)
     var = StringVar(title_frame)
     options = ["Strong", "Medium", "Weak"]
     var.set(options[0])
-    strength_select = OptionMenu(title_frame, var, *options, command=lambda m=matches: change_strength(m))
+    strength_select = OptionMenu(title_frame, var, *options, command=change_strength)
     strength_select.config(bg=spotify_green, fg=spotify_black, font=("Calibri", 12, "bold"), highlightthickness=0, width=6)
+    title_frame.back_image = PhotoImage(file="prev.png")
+    title_frame.next_image = PhotoImage(file="next.png")
+    back_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=initialize)
+    prev_button = Button(title_frame, cursor="hand2", image=title_frame.back_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=prev_page)
+    next_button = Button(title_frame, cursor="hand2", image=title_frame.next_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=next_page)
+    page_label = Label(title_frame, text=f"1/{num_pages}", font=("Calibri", 15), fg=spotify_white, bg=spotify_black)
+    matches_label = Label(title_frame, text="Matches", font=("Calibri", 25), fg=spotify_white, bg=spotify_black)
     back_button.place(x=10, y=10)
-    matches_label.place(x=340, y=40)
+    matches_label.place(x=340, y=25)
     strength_select.place(x=727, y=45)
+    prev_button.place(x=335, y=70)
+    page_label.place(x=385, y=72)
+    next_button.place(x=430, y=70)
 
     # Making the scroll bar functional so that it scrolls the display frame
-    display_canvas = Canvas(display_frame, height=375, width=835, bg="blue", highlightthickness=0)
+    display_canvas = Canvas(display_frame, height=375, width=835, bg=spotify_black, highlightthickness=0)
     display_canvas.grid(row=0, column=0)
     scroll = Scrollbar(display_frame, orient=VERTICAL, command=display_canvas.yview)
     scroll.grid(row=0, column=1, sticky='ns')
     display_canvas.configure(yscrollcommand=scroll.set)
     display_canvas.bind('<Configure>', lambda e: display_canvas.configure(scrollregion=display_canvas.bbox('all')))
-    canvas_frame = Frame(display_canvas, bg="blue")
+    canvas_frame = Frame(display_canvas, bg=spotify_black)
     display_canvas.create_window((0, 0), window=canvas_frame, anchor='n')
 
-    # Adding the songs to the display frame
-    height = len(matches['strong']) * 71
+    # Creating the columns for the data that needs to be displayed
+    height = (pages[0][1] - pages[0][0] + 1) * 71 # Find the height needed to display all the songs in the first page
     song_frame = Frame(canvas_frame, bg=spotify_black, width=301, height=height)
     song_tempo_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
     song_dance_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
     song_energy_frame = Frame(canvas_frame, bg=spotify_black, width=178, height=height)
-    song_frame.grid(row=0, column=0,)
+    song_frame.grid(row=0, column=0)
     song_tempo_frame.grid(row=0, column=1)
     song_dance_frame.grid(row=0, column=2)
     song_energy_frame.grid(row=0, column=3)
@@ -419,6 +458,8 @@ def display_matches(matches):
     song_tempo_frame.pack_propagate(False)
     song_dance_frame.pack_propagate(False)
     song_energy_frame.pack_propagate(False)
+
+    # Add subheadings for each column
     song_sub_title = Label(song_frame, text="Song", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
     tempo_sub_title = Label(song_tempo_frame, text="Tempo", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
     dance_sub_title = Label(song_dance_frame, text="Dance Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
@@ -427,19 +468,28 @@ def display_matches(matches):
     tempo_sub_title.pack()
     dance_sub_title.pack()
     energy_sub_title.pack()
-    root.images = []
-    for i in matches['strong']:
-        root.images.append(photo_imagify(i['Image']))
-    count = 0
-    for i in matches['strong']:
-        if len(i['Name']) > 20:
-            i['Name'] = i['Name'][0:20]
-        if len(i['Artist']) > 20:
-            i['Artist'] = i['Artist'][0:20]
-        tempo = str(ceil(i['Tempo']))
-        dance = str(ceil(i['Danceability']*10))
-        energy = str(ceil(i['Energy']*10))
-        song_label = Label(song_frame, image=root.images[count], text=f" {i['Name']}\n {i['Artist']}",
+
+    # Add needed variables to the match elements list so they can be edited later
+    match_elements.append(var)  # 0
+    match_elements.append(song_frame)  # 1
+    match_elements.append(song_tempo_frame)  # 2
+    match_elements.append(song_dance_frame)  # 3
+    match_elements.append(song_energy_frame)  # 4
+    match_elements.append(display_canvas) # 5
+    match_elements.append(page_label) # 6
+    match_elements.append(matches_frame) # 7
+    root.update()
+
+    # Pack the needed songs to be displayed
+    for i in range(pages[0][1] - pages[0][0]+1):
+        if len(matches['strong'][i]['Name']) > 20:
+            matches['strong'][i]['Name'] = matches['strong'][i]['Name'][0:20]
+        if len(matches['strong'][i]['Artist']) > 20:
+            matches['strong'][i]['Artist'] = matches['strong'][i]['Artist'][0:20]
+        tempo = str(ceil(matches['strong'][i]['Tempo']))
+        dance = str(ceil(matches['strong'][i]['Danceability'] * 10))
+        energy = str(ceil(matches['strong'][i]['Energy'] * 10))
+        song_label = Label(song_frame, image=matches['strong'][i]['Image'], text=f" {matches['strong'][i]['Name']}\n {matches['strong'][i]['Artist']}",
                            bg=spotify_black, fg=spotify_white, font=('Calibri', 15), compound=LEFT, anchor='w')
         song_tempo_label = Label(song_tempo_frame, text=tempo, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
         song_dance_label = Label(song_dance_frame, text=dance, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
@@ -448,11 +498,310 @@ def display_matches(matches):
         song_tempo_label.pack(pady=20)
         song_dance_label.pack(pady=20)
         song_energy_label.pack(pady=20)
-        count += 1
+        root.update()
 
 
-def change_strength(matches):
-    pass
+def change_strength(strength):
+    global match_elements
+    global pages
+    global current_page
+    global matches
+    # Get new selected height
+    strength = strength.lower()
+    if strength == "medium":
+        strength = "moderate"
+    # Re configure the pages data
+    pages = {}
+    num_pages = ceil(len(matches[strength]) / 100)
+    if num_pages == 0:
+        pages[0] = [0, 0]
+    else:
+        for i in range(num_pages):
+            if i + 1 == num_pages:
+                pages[i] = [i * 100, len(matches[strength]) - 1]
+            else:
+                pages[i] = [i * 100, ((i + 1) * 100) - 1]
+    current_page = 1
+    match_elements[6]['text'] = f"{current_page}/{len(pages)}"
+    # Delete all elements in the columns to make way for new new ones
+    for widgets in match_elements[1].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[2].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[3].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[4].winfo_children():
+        widgets.destroy()
+    # Add the column sub headings
+    song_sub_title = Label(match_elements[1], text="Song", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    tempo_sub_title = Label(match_elements[2], text="Tempo", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    dance_sub_title = Label(match_elements[3], text="Dance Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    energy_sub_title = Label(match_elements[4], text="Energy Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    song_sub_title.pack(anchor=W, padx=10)
+    tempo_sub_title.pack()
+    dance_sub_title.pack()
+    energy_sub_title.pack()
+    # Configure the columns height
+    height = ((pages[0][1] - pages[0][0]+1) * 71)+25
+    match_elements[1].config(height=height)
+    match_elements[2].config(height=height)
+    match_elements[3].config(height=height)
+    match_elements[4].config(height=height)
+    # If there are no songs in this strength, update scroll region and return
+    if num_pages == 0:
+        match_elements[5].configure(scrollregion=match_elements[5].bbox("all"))
+        return
+    # Add the needed songs to the display
+    for i in range(pages[0][1] - pages[0][0]+1):
+        if len(matches[strength][i]['Name']) > 20:
+            matches[strength][i]['Name'] = matches[strength][i]['Name'][0:20]
+        if len(matches[strength][i]['Artist']) > 20:
+            matches[strength][i]['Artist'] = matches[strength][i]['Artist'][0:20]
+        tempo = str(ceil(matches[strength][i]['Tempo']))
+        dance = str(ceil(matches[strength][i]['Danceability'] * 10))
+        energy = str(ceil(matches[strength][i]['Energy'] * 10))
+        song_label = Label(match_elements[1], image=matches[strength][i]['Image'], text=f" {matches[strength][i]['Name']}\n {matches[strength][i]['Artist']}",
+                           bg=spotify_black, fg=spotify_white, font=('Calibri', 15), compound=LEFT, anchor='w')
+        song_tempo_label = Label(match_elements[2], text=tempo, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_dance_label = Label(match_elements[3], text=dance, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_energy_label = Label(match_elements[4], text=energy, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_label.pack(anchor=W, padx=10)
+        song_tempo_label.pack(pady=20)
+        song_dance_label.pack(pady=20)
+        song_energy_label.pack(pady=20)
+        root.update()
+    # Update scroll region to adjust for new height
+    match_elements[5].configure(scrollregion=match_elements[5].bbox("all"))
+
+
+def prev_page():
+    global pages
+    global matches
+    global current_page
+    global match_elements
+    # Get the current strength selected
+    strength = (match_elements[0].get()).lower()
+    if strength == "medium":
+        strength = "moderate"
+    # if user is on the first page, don't do anything
+    if current_page == 1:
+        return
+    # Update the current page display label
+    match_elements[6]['text'] = f"{current_page-1}/{len(pages)}"
+    # Delete all current songs in the display frame
+    for widgets in match_elements[1].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[2].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[3].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[4].winfo_children():
+        widgets.destroy()
+    # Re add the column sub headings
+    song_sub_title = Label(match_elements[1], text="Song", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    tempo_sub_title = Label(match_elements[2], text="Tempo", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    dance_sub_title = Label(match_elements[3], text="Dance Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    energy_sub_title = Label(match_elements[4], text="Energy Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    song_sub_title.pack(anchor=W, padx=10)
+    tempo_sub_title.pack()
+    dance_sub_title.pack()
+    energy_sub_title.pack()
+    # Configure the new height for the columns
+    height = (pages[current_page-2][1] - pages[current_page-2][0] + 1) * 71
+    match_elements[1].config(height=height)
+    match_elements[2].config(height=height)
+    match_elements[3].config(height=height)
+    match_elements[4].config(height=height)
+    # Add the needed songs to the display
+    for j in range(pages[current_page-2][1] - pages[current_page-2][0] + 1):
+        i = ((current_page-2)*100) + j
+        if len(matches[strength][i]['Name']) > 20:
+            matches[strength][i]['Name'] = matches[strength][i]['Name'][0:20]
+        if len(matches[strength][i]['Artist']) > 20:
+            matches[strength][i]['Artist'] = matches[strength][i]['Artist'][0:20]
+        tempo = str(ceil(matches[strength][i]['Tempo']))
+        dance = str(ceil(matches[strength][i]['Danceability'] * 10))
+        energy = str(ceil(matches[strength][i]['Energy'] * 10))
+        song_label = Label(match_elements[1], image=matches[strength][i]['Image'], text=f" {matches[strength][i]['Name']}\n {matches[strength][i]['Artist']}",
+                           bg=spotify_black, fg=spotify_white, font=('Calibri', 15), compound=LEFT, anchor='w')
+        song_tempo_label = Label(match_elements[2], text=tempo, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_dance_label = Label(match_elements[3], text=dance, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_energy_label = Label(match_elements[4], text=energy, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_label.pack(anchor=W, padx=10)
+        song_tempo_label.pack(pady=20)
+        song_dance_label.pack(pady=20)
+        song_energy_label.pack(pady=20)
+        root.update()
+    # Update the current page variable
+    current_page -= 1
+    match_elements[5].configure(scrollregion=match_elements[5].bbox("all")) # Update the scroll region to adjust for new height
+
+
+def next_page():
+    global pages
+    global matches
+    global current_page
+    global match_elements
+    # Find the current selected strength
+    strength = (match_elements[0].get()).lower()
+    if strength == "medium":
+        strength = "moderate"
+    if current_page == len(pages):
+        return
+    # Change the page label
+    match_elements[6]['text'] = f"{current_page+1}/{len(pages)}"
+    # Delete all current songs in the frame
+    for widgets in match_elements[1].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[2].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[3].winfo_children():
+        widgets.destroy()
+    for widgets in match_elements[4].winfo_children():
+        widgets.destroy()
+    # Re add the column sub headings
+    song_sub_title = Label(match_elements[1], text="Song", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    tempo_sub_title = Label(match_elements[2], text="Tempo", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    dance_sub_title = Label(match_elements[3], text="Dance Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    energy_sub_title = Label(match_elements[4], text="Energy Value", bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+    song_sub_title.pack(anchor=W, padx=10)
+    tempo_sub_title.pack()
+    dance_sub_title.pack()
+    energy_sub_title.pack()
+    # Configure the new height for the frames
+    height = (pages[current_page][1] - pages[current_page][0] + 1) * 71
+    match_elements[1].config(height=height)
+    match_elements[2].config(height=height)
+    match_elements[3].config(height=height)
+    match_elements[4].config(height=height)
+    # Add the right songs to the frame display
+    for j in range(pages[current_page][1] - pages[current_page][0] + 1):
+        i = (current_page*100) + j
+        if len(matches[strength][i]['Name']) > 20:
+            matches[strength][i]['Name'] = matches[strength][i]['Name'][0:20]
+        if len(matches[strength][i]['Artist']) > 20:
+            matches[strength][i]['Artist'] = matches[strength][i]['Artist'][0:20]
+        tempo = str(ceil(matches[strength][i]['Tempo']))
+        dance = str(ceil(matches[strength][i]['Danceability'] * 10))
+        energy = str(ceil(matches[strength][i]['Energy'] * 10))
+        song_label = Label(match_elements[1], image=matches[strength][i]['Image'], text=f" {matches[strength][i]['Name']}\n {matches[strength][i]['Artist']}",
+                           bg=spotify_black, fg=spotify_white, font=('Calibri', 15), compound=LEFT, anchor='w')
+        song_tempo_label = Label(match_elements[2], text=tempo, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_dance_label = Label(match_elements[3], text=dance, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_energy_label = Label(match_elements[4], text=energy, bg=spotify_black, fg=spotify_white, font=('Calibri', 15))
+        song_label.pack(anchor=W, padx=10)
+        song_tempo_label.pack(pady=20)
+        song_dance_label.pack(pady=20)
+        song_energy_label.pack(pady=20)
+        root.update()
+    # Make sure the current page var gets updated
+    current_page += 1
+    match_elements[5].configure(scrollregion=match_elements[5].bbox("all")) # Update the scroll region to adjust for new height
+
+
+def initialize():
+    global match_elements
+    # Clear the window if the user hit the back button from the matches screen
+    if len(match_elements) == 8:
+        match_elements[7].destroy()
+    match_elements.clear()
+
+    # Initializing the sections of the main page
+    main_frame = Frame(root, width=850, height=500, bg=spotify_black)
+    top_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
+    mid_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
+    bottom_frame = Frame(main_frame, width=850, height=168, bg=spotify_black)
+    top_frame.grid_propagate(False)
+    mid_frame.grid_propagate(False)
+    bottom_frame.grid_propagate(False)
+    main_frame.pack()
+    top_frame.grid(row=0, column=0)
+    mid_frame.grid(row=1, column=0)
+    bottom_frame.grid(row=2, column=0)
+
+    # Creating elements in the top frame
+    title_label = Label(top_frame, text="Runify - Spherical-S", font=("Calibri", 25), fg=spotify_white,
+                        bg=spotify_black)
+    url_label = Label(top_frame, text="Spotify profile URL:", font=("Calibri", 20), fg=spotify_white, bg=spotify_black)
+    url_entry = Entry(top_frame, font=("Calibri", 20), fg="black", bg="white", width=50)
+    title_label.pack(pady=7)
+    url_label.pack(pady=7)
+    url_entry.pack(pady=7)
+
+    # Creating frames for each input in the mid frame
+    tempo_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
+    dance_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
+    energy_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
+    tempo_frame.grid(row=0, column=0, padx=(107, 50), pady=6)
+    dance_frame.grid(row=0, column=1, padx=50, pady=6)
+    energy_frame.grid(row=0, column=2, padx=(50, 107), pady=6)
+
+    # Elements for tempo input in the mid frame
+    tempo_label = Label(tempo_frame, text="Goal Cadence", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    tempo_min = Entry(tempo_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    tempo_max = Entry(tempo_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    tempo_min_label = Label(tempo_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    tempo_max_label = Label(tempo_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    tempo_dash = Label(tempo_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    tempo_range = Label(tempo_frame, text="(120 - 220)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    tempo_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
+    tempo_min.grid(row=1, column=0, padx=2, pady=2)
+    tempo_dash.grid(row=1, column=1, pady=2)
+    tempo_max.grid(row=1, column=2, padx=2, pady=2)
+    tempo_min_label.grid(row=2, column=0, padx=2, pady=2)
+    tempo_max_label.grid(row=2, column=2, padx=2, pady=2)
+    tempo_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
+
+    # Elements for dance input in the mid frame
+    dance_label = Label(dance_frame, text="Danceability", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    dance_min = Entry(dance_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    dance_max = Entry(dance_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    dance_min_label = Label(dance_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    dance_max_label = Label(dance_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    dance_dash = Label(dance_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    dance_range = Label(dance_frame, text="(0 - 10)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    dance_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
+    dance_min.grid(row=1, column=0, padx=2, pady=2)
+    dance_dash.grid(row=1, column=1, pady=2)
+    dance_max.grid(row=1, column=2, padx=2, pady=2)
+    dance_min_label.grid(row=2, column=0, padx=2, pady=2)
+    dance_max_label.grid(row=2, column=2, padx=2, pady=2)
+    dance_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
+
+    # Elements for energy input in the mid frame
+    energy_label = Label(energy_frame, text="Energy Level", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    energy_min = Entry(energy_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    energy_max = Entry(energy_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
+    energy_min_label = Label(energy_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    energy_max_label = Label(energy_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    energy_dash = Label(energy_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    energy_range = Label(energy_frame, text="(0 - 10)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
+    energy_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
+    energy_min.grid(row=1, column=0, padx=2, pady=2)
+    energy_dash.grid(row=1, column=1, pady=2)
+    energy_max.grid(row=1, column=2, padx=2, pady=2)
+    energy_min_label.grid(row=2, column=0, padx=2, pady=2)
+    energy_max_label.grid(row=2, column=2, padx=2, pady=2)
+    energy_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
+
+    # Elements in the bottom frame
+    error_label = Label(bottom_frame, text="", font=("Calibri", 18), fg="red", bg=spotify_black)
+    root.submit_image = PhotoImage(file="submit.png")
+    submit_button = Button(bottom_frame, cursor="hand2", image=root.submit_image, borderwidth=0, bg=spotify_black,
+                           activebackground=spotify_black, command=verify)
+    error_label.pack(pady=20)
+    submit_button.pack(pady=15)
+
+    # Adding needed elements to the match_elements list so they can be edited later
+    match_elements.append(main_frame) # 0
+    match_elements.append(error_label) # 1
+    match_elements.append(url_entry) # 2
+    match_elements.append(tempo_min) # 3
+    match_elements.append(tempo_max) # 4
+    match_elements.append(dance_min) # 5
+    match_elements.append(dance_max) # 6
+    match_elements.append(energy_min) # 7
+    match_elements.append(energy_max) # 8
 
 
 # initialize global variables
@@ -460,6 +809,10 @@ track_list = {}
 song_metrics = {}
 threads = []
 lock = Lock()
+pages = {}
+current_page = 1
+matches = {}
+match_elements = []
 spotify_black = "#121212"
 spotify_white = "#B3B3B3"
 spotify_green = "#73D565"
@@ -473,90 +826,8 @@ root.iconphoto(True, icon)
 root.config(background="red")
 root.resizable(False, False)
 
-# Initializing the sections of the main page
-main_frame = Frame(root, width=850, height=500, bg=spotify_black)
-top_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
-mid_frame = Frame(main_frame, width=850, height=166, bg=spotify_black)
-bottom_frame = Frame(main_frame, width=850, height=168, bg=spotify_black)
-top_frame.grid_propagate(False)
-mid_frame.grid_propagate(False)
-bottom_frame.grid_propagate(False)
-main_frame.pack()
-top_frame.grid(row=0, column=0)
-mid_frame.grid(row=1, column=0)
-bottom_frame.grid(row=2, column=0)
-
-# Creating elements in the top frame
-title_label = Label(top_frame, text="Runify - Spherical-S", font=("Calibri", 25), fg=spotify_white, bg=spotify_black)
-url_label = Label(top_frame, text="Spotify profile URL:", font=("Calibri", 20), fg=spotify_white, bg=spotify_black)
-url_entry = Entry(top_frame, font=("Calibri", 20), fg="black", bg="white", width=50)
-title_label.pack(pady=7)
-url_label.pack(pady=7)
-url_entry.pack(pady=7)
-
-# Creating frames for each input in the mid frame
-tempo_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
-dance_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
-energy_frame = Frame(mid_frame, width=275, height=150, bg=spotify_black)
-tempo_frame.grid(row=0, column=0, padx=(107, 50), pady=6)
-dance_frame.grid(row=0, column=1, padx=50, pady=6)
-energy_frame.grid(row=0, column=2, padx=(50, 107), pady=6)
-
-# Elements for tempo input in the mid frame
-tempo_label = Label(tempo_frame, text="Goal Cadence", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-tempo_min = Entry(tempo_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-tempo_max = Entry(tempo_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-tempo_min_label = Label(tempo_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-tempo_max_label = Label(tempo_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-tempo_dash = Label(tempo_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-tempo_range = Label(tempo_frame, text="(120 - 220)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-tempo_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
-tempo_min.grid(row=1, column=0, padx=2, pady=2)
-tempo_dash.grid(row=1, column=1, pady=2)
-tempo_max.grid(row=1, column=2, padx=2, pady=2)
-tempo_min_label.grid(row=2, column=0, padx=2, pady=2)
-tempo_max_label.grid(row=2, column=2, padx=2, pady=2)
-tempo_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
-
-# Elements for dance input in the mid frame
-dance_label = Label(dance_frame, text="Danceability", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-dance_min = Entry(dance_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-dance_max = Entry(dance_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-dance_min_label = Label(dance_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-dance_max_label = Label(dance_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-dance_dash = Label(dance_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-dance_range = Label(dance_frame, text="(0 - 10)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-dance_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
-dance_min.grid(row=1, column=0, padx=2, pady=2)
-dance_dash.grid(row=1, column=1, pady=2)
-dance_max.grid(row=1, column=2, padx=2, pady=2)
-dance_min_label.grid(row=2, column=0, padx=2, pady=2)
-dance_max_label.grid(row=2, column=2, padx=2, pady=2)
-dance_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
-
-# Elements for energy input in the mid frame
-energy_label = Label(energy_frame, text="Energy Level", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-energy_min = Entry(energy_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-energy_max = Entry(energy_frame, font=("Calibri", 20), fg="black", bg="white", width=3)
-energy_min_label = Label(energy_frame, text="Min", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-energy_max_label = Label(energy_frame, text="Max", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-energy_dash = Label(energy_frame, text="-", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-energy_range = Label(energy_frame, text="(0 - 10)", font=("Calibri", 18), fg=spotify_white, bg=spotify_black)
-energy_label.grid(row=0, column=0, columnspan=3, padx=2, pady=2)
-energy_min.grid(row=1, column=0, padx=2, pady=2)
-energy_dash.grid(row=1, column=1, pady=2)
-energy_max.grid(row=1, column=2, padx=2, pady=2)
-energy_min_label.grid(row=2, column=0, padx=2, pady=2)
-energy_max_label.grid(row=2, column=2, padx=2, pady=2)
-energy_range.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
-
-# Elements in the bottom frame
-error_label = Label(bottom_frame, text="", font=("Calibri", 18), fg="red", bg=spotify_black)
-submit_image = PhotoImage(file="submit.png")
-submit_button = Button(bottom_frame, cursor="hand2", image=submit_image, borderwidth=0, bg=spotify_black, activebackground=spotify_black, command=verify)
-error_label.pack(pady=20)
-submit_button.pack(pady=15)
-
+# initialize the program
+initialize()
 
 # Starts the application
 root.mainloop()
