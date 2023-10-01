@@ -13,7 +13,7 @@ and songs that match the danceablity and energy levels specified.
 # Security
 
 * Windows may detect Runify as a virus, it is a **false positive** and may be ignored.
-* If windows says it protected your PC, you may still run capn/the capn installer by clicking on "More info" then "run anyways"
+* If windows says it protected your PC, you may still run runify/the runify installer by clicking on "More info" then "run anyways"
 
 # Bugs
 
