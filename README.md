@@ -1,4 +1,4 @@
-[![github](https://cdn.discordapp.com/attachments/983104809064345640/1236814847027712010/pngtree-download-button-blue-transparent-background-vector-png-image_6644273.png?ex=66396116&is=66380f96&hm=36676a3256250f400474e8b6dedc6de5a6546d2c37db2405956793920445d677&)](https://github.com/Spherical-S/Runify/releases) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y0C2CAM)
+[![github](https://cdn.discordapp.com/attachments/983104809064345640/1236815237131276431/image.png?ex=66396173&is=66380ff3&hm=5b80f089d32638d3695534fb0ecf22287cfaa8c9b474a269bd80236e254f2109&)](https://github.com/Spherical-S/Runify/releases) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y0C2CAM)
 
 # Runify
 
