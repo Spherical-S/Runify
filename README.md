@@ -1,4 +1,4 @@
-[![github](https://cdn.discordapp.com/attachments/983104763199639562/1061778049349189642/Untitled-2.png)](https://github.com/Spherical-S/Runify/releases) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y0C2CAM)
+[![github]([https://cdn.discordapp.com/attachments/983104763199639562/1061778049349189642/Untitled-2.png](https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.freepik.com%2Ffree-photos-vectors%2Fdownload-button&psig=AOvVaw36x7ad6j982GIW-HoY2iO9&ust=1715036134305000&source=images&cd=vfe&opi=89978449&ved=0CBIQjRxqFwoTCNjfgc_N94UDFQAAAAAdAAAAABAK))](https://github.com/Spherical-S/Runify/releases) [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y0C2CAM)
 
 # Runify
 
