@@ -2,6 +2,8 @@
 
 # Runify
 
+Disclaimer: Spotify has changed the way their API works and thus Runify no longer works...
+
 V1.0.0
 
 Rather than trying to find a playlist that has a good tempo AND songs they actually like, using Runify, runners can find songs that are already in their playlists that would be good to run to.
